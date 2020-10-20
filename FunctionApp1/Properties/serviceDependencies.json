@@ -1,0 +1,16 @@
+{
+  "dependencies": {
+    "storage1": {
+      "type": "storage",
+      "connectionId": "AzureWebJobsStorage"
+    },
+    "secrets1": {
+      "type": "secrets",
+      "connectionId": "VaultUri"
+    },
+    "mssql1": {
+      "type": "mssql",
+      "connectionId": "dbConnection"
+    }
+  }
+}

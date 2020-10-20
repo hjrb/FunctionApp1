@@ -1,0 +1,22 @@
+{
+  "dependencies": {
+    "storage1": {
+      "resourceId": "/subscriptions/[parameters('subscriptionId')]/resourceGroups/[parameters('resourceGroupName')]/providers/Microsoft.Storage/storageAccounts/storagehjrp",
+      "type": "storage.azure",
+      "connectionId": "AzureWebJobsStorage",
+      "secretStore": "AzureAppSettings"
+    },
+    "secrets1": {
+      "resourceId": "/subscriptions/[parameters('subscriptionId')]/resourceGroups/[parameters('resourceGroupName')]/providers/Microsoft.KeyVault/vaults/FunctionAppVaulthjrp",
+      "type": "secrets.keyVault",
+      "connectionId": "VaultUri",
+      "secretStore": "AzureAppSettings"
+    },
+    "mssql1": {
+      "resourceId": "/subscriptions/[parameters('subscriptionId')]/resourceGroups/[parameters('resourceGroupName')]/providers/Microsoft.Sql/servers/dbserverhjrp/databases/dbhjrp",
+      "type": "mssql.azure",
+      "connectionId": "dbConnection",
+      "secretStore": "AzureKeyVault"
+    }
+  }
+}
