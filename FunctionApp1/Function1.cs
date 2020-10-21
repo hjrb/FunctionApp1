@@ -9,39 +9,68 @@ using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using System.Data.SqlClient;
 using System.Collections.Generic;
+using Microsoft.Extensions.Configuration.EnvironmentVariables;
+using Microsoft.DotNet.PlatformAbstractions;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Azure.Services.AppAuthentication;
+using Microsoft.Azure.KeyVault;
 
 namespace FunctionApp1
 {
     public static class Function1
     {
+        //public static async Task<string> GetSecretValue(string keyName)
+        //{
+        //    var azureServiceTokenProvider = new AzureServiceTokenProvider();
+        //    var keyVaultClient = new KeyVaultClient(new KeyVaultClient.AuthenticationCallback(azureServiceTokenProvider.KeyVaultTokenCallback));
+        //    //slow without ConfigureAwait(false)    
+        //    //keyvault should be keyvault DNS Name    
+        //    var uri = Environment.GetEnvironmentVariable("VaultUri");
+        //    var secretBundle = await keyVaultClient.GetSecretAsync(uri + keyName).ConfigureAwait(false);
+        //    return secretBundle.Value;
+
+        //}
+
         [FunctionName("GetPersons")]
         public static async Task<IActionResult> Run(
             [HttpTrigger(AuthorizationLevel.Function, "get", "post", Route = null)] HttpRequest req,
-            ILogger log)
+            ILogger logger)
         {
-            log.LogInformation("C# HTTP trigger function processed a request.");
+            logger.LogInformation("C# HTTP trigger function processed a request.");
 
-            // string name = req.Query["name"];
+            string ID  = req.Query["ID"];
 
-            // string requestBody = await new StreamReader(req.Body).ReadToEndAsync();
-            // dynamic data = JsonConvert.DeserializeObject(requestBody);
-            // name = name ?? data?.name;
-            
+            var requestBody = await new StreamReader(req.Body).ReadToEndAsync();
+            dynamic data = JsonConvert.DeserializeObject(requestBody);
+            ID ??= data?.ID;
+            logger.LogInformation("ID: " + ID);
 
-            var builder = new SqlConnectionStringBuilder()
-            {
-                DataSource = "tcp:dbserverhjrp.database.windows.net,1433",
-                UserID = "hjrp",
-                PersistSecurityInfo = false,
-                IntegratedSecurity = false,
-                Password = "BwbPPe46qwS",
-                InitialCatalog = "dbhjrp",
-                Encrypt = true
+            var config = new ConfigurationBuilder()
+              //.SetBasePath(context.FunctionAppDirectory)
+              // .AddJsonFile("local.settings.json", optional: true, reloadOnChange: true)
+              .AddEnvironmentVariables()
+              .Build();
 
-            };
-            log.LogInformation(builder.ConnectionString);
+            // Access our secret setting, normally as any other setting
+            // see https://www.youtube.com/watch?v=6HKj5hOuD00&ab_channel=MicrosoftAzure
+
+            var connectionString = config["dbConnection"];
+            //logger.LogDebug($"{connectionString}");
+
+            //var builder = new SqlConnectionStringBuilder()
+            //{
+            //    DataSource = "tcp:dbserverhjrp.database.windows.net,1433",
+            //    UserID = "hjrp",
+            //    PersistSecurityInfo = false,
+            //    IntegratedSecurity = false,
+            //    Password = "BwbPPe46qwS",
+            //    InitialCatalog = "dbhjrp",
+            //    Encrypt = true
+
+            //};
+            // logger.LogInformation(builder.ConnectionString);
             var persons = new List<object>();
-            using (var connection = new SqlConnection(builder.ConnectionString))
+            using (var connection = new SqlConnection(connectionString))
             {
                 try
                 {
@@ -49,11 +78,13 @@ namespace FunctionApp1
                 }
                 catch (SqlException e)
                 {
-                    log.LogError(e, "Failed to access database");
+                    logger.LogError(e, "Failed to access database");
                     return new BadRequestObjectResult("Database access failure");
                 }
                 var sql = "SELECT ID, LastName, FirstName FROM dbo.Persons Order by LastName, FirstName";
+                if (int.TryParse(ID, out var intID)) sql += " WHERE ID=@ID";
                 using var command = new SqlCommand(sql, connection);
+                command.Parameters.AddWithValue("ID", intID);
                 using var reader = await command.ExecuteReaderAsync();
                 while (await reader.ReadAsync())
                 {
@@ -64,17 +95,11 @@ namespace FunctionApp1
                         ID = reader.GetInt32(0)
                     };
                     persons.Add(person);
-                    // Console.WriteLine("{0} {1}", reader.GetString(0), reader.GetString(1));
                 }
             }
-            log.LogInformation($"Found {persons.Count} persons.");
+            logger.LogInformation($"Found {persons.Count} persons.");
             var personsJson = JsonConvert.SerializeObject(persons);
             return new JsonResult(personsJson);
-            // string responseMessage = string.IsNullOrEmpty(name)
-            //     ? "This HTTP triggered function executed successfully. Pass a name in the query string or in the request body for a personalized response."
-            //             : $"Hello, {name}. This HTTP triggered function executed successfully.";
-
-            //         return new OkObjectResult(responseMessage);
         }
     }
 }
