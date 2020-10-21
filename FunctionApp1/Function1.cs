@@ -81,10 +81,11 @@ namespace FunctionApp1
                     logger.LogError(e, "Failed to access database");
                     return new BadRequestObjectResult("Database access failure");
                 }
-                var sql = "SELECT ID, LastName, FirstName FROM dbo.Persons Order by LastName, FirstName";
+                var sql = "SELECT ID, LastName, FirstName FROM dbo.Persons ";
                 if (int.TryParse(ID, out var intID)) sql += " WHERE ID=@ID";
+                else sql += " Order by LastName, FirstName";
                 using var command = new SqlCommand(sql, connection);
-                command.Parameters.AddWithValue("ID", intID);
+                command.Parameters.AddWithValue("@ID", intID);
                 using var reader = await command.ExecuteReaderAsync();
                 while (await reader.ReadAsync())
                 {
